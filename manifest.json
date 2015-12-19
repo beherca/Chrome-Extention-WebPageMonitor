@@ -1,7 +1,7 @@
 {
-  "name": "Ticket !!",
-  "description": "Make the current page red",
-  "version": "2.4",
+  "name": "crawler",
+  "description": "Constantly monitor changes on your website",
+  "version": "0.1",
   "permissions": [
     "activeTab"
   ],

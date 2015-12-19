@@ -1,6 +1,8 @@
 var timmer = null;
 var currentTab = null;
 var diffTarget = null;
+var running = false;
+
 // Called when the user clicks on the browser action.
 chrome.browserAction.onClicked.addListener(function(tab) {
     // No tabs or host permissions needed!
@@ -10,46 +12,58 @@ chrome.browserAction.onClicked.addListener(function(tab) {
     //   code: 'setInterval(function(){console.log("timmer")}, 2000);'
     // });
     //chrome.tabs.executeScript(null, {file: "content_script.js"});
-  
-    if(currentTab == null){
+    stop_refresh();
+    timmer = null;
+    diffTarget = null;
+
+    if(!running){// not running
         currentTab = tab;
-        time();
+        chrome.tabs.sendMessage(currentTab.id, {command: "init"}, function(response) {
+            console.log(response);
+        });
     }else{
         if(currentTab.id != tab.id){
-            currentTab = tab;
-            stop_refresh();
-        }
-        time();
-    }
-    
-});
+            chrome.tabs.sendMessage(currentTab.id, {command: "destroy"}, function(response) {
+                console.log(response);
+            });
 
-function time(){
-    if(!timmer){
-        playSound("startup");
-        chrome.tabs.sendMessage(currentTab.id, {command: "init"}, function(response) {
-            console.log(response.farewell);
-        });
-        start_refresh();
-    }else{
-        chrome.tabs.sendMessage(currentTab.id, {command: "destroy"}, function(response) {
-            console.log(response.farewell);
-        });
-        stop_refresh();
+            currentTab = tab;
+            chrome.tabs.sendMessage(currentTab.id, {command: "init"}, function(response) {
+                console.log(response);
+            });
+        }else{
+            chrome.tabs.sendMessage(currentTab.id, {command: "destroy"}, function(response) {
+                console.log(response);
+            });
+            stop_refresh();
+            alert('stopped');
+        }
     }
-}
+});
 
 function reload(){
     console.log("timmer");
     if(currentTab){
         chrome.tabs.reload(currentTab.id, function(){
-            diff();
-            start_refresh();
+            chrome.tabs.sendMessage(currentTab.id, {command: "diff", diffTarget: diffTarget}, function(response) {
+                console.log(response.isDiff);
+                if(response.isDiff){
+                    playSound("startup");
+                    stop_refresh();
+                    alert('mismatch found');
+                }else{
+                    start_refresh();
+                }
+                    
+            });
+            
         });
     }
 }
 
 function start_refresh(){
+    clearTimeout(timmer);
+    timmer = null;
     timmer = setTimeout(reload, 5000);
 }
 
@@ -57,7 +71,6 @@ function start_refresh(){
 function stop_refresh(){
     clearTimeout(timmer);
     timmer = null;
-    alert('stopped');
 }
 
 
@@ -169,6 +182,7 @@ function contentHandler(request, sender, sendResponse) {
     if(request.command === 'set'){
         console.info(JSON.parse(request.info));
         diffTarget = request.info;
+        start_refresh();
     }
   }
 

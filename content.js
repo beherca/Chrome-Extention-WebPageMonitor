@@ -12,11 +12,7 @@ function mout(e){
 }
 
 function mover(e){
-    var s = e.target.style;
-    var cs = e.target.currentStyle || window.getComputedStyle(e.target);
-    s.borderColor='red';
-    s.borderWidth = '2px';
-    s.borderStyle = 'solid';
+    highlight(e.target);
     // var att = document.createAttribute("omargin");       // Create a "class" attribute
     // att.value = [cs.marginTop,cs.marginBottom,cs.marginRight, cs.marginLeft].join(' ');                           // Set the value of the class attribute
     // e.target.setAttributeNode(att); 
@@ -24,10 +20,18 @@ function mover(e){
     // s.marginBottom = (cs.marginBottom.replace('px','')*1 - 2) + 'px';
     // s.marginRight = (cs.marginRight.replace('px','')*1 - 2) + 'px';
     // s.marginLeft = (cs.marginLeft.replace('px','')*1 - 2) + 'px';
+}
 
+function highlight(t){
+    var s = t.style;
+    s.borderColor='red';
+    s.borderWidth = '2px';
+    s.borderStyle = 'solid';
 }
 
 function click(e){
+    e.preventDefault();
+
     var t = e.target;
     var p = e.target.parentNode;
     var offset = getOffset(t);
@@ -65,7 +69,7 @@ function getOffset( el ) {
     return { top: _y, left: _x };
 }
 
-function diff(){
+function diff(diffTarget){
     var candidate = function(diffTarget){
         var candidates = [];
         var addCndts = function(cndt, score){
@@ -113,7 +117,7 @@ function diff(){
             }
         }
 
-        var eles = document.elementFromPoint(diffTarget.x, diffTarget.y);
+        var ele = document.elementFromPoint(diffTarget.x, diffTarget.y);
         addCndts(ele, 0.2);
         return candidates;
     };
@@ -128,20 +132,23 @@ function diff(){
         }
         return top.ele;
     }
-    var compare = function(candidate){
-        if(candidate.outerHTML != diffTarget.outerHTML){
+    var compare = function(canEle){
+        if(canEle.outerHTML != diffTarget.outerHTML){
+            console.log(canEle.outerHTML);
+            console.log(diffTarget.outerHTML);
             return true;
         }
         return false;
     };
     if(diffTarget){
         console.log(diffTarget);
-        var isDiff = compare(top(candidate(diffTarget)));
-        alert(isDiff? 'DIff' : "identical");
+        var candi = candidate(diffTarget);
+        var topEle = top(candi);
+        highlight(topEle);
+        var isDiff = compare(topEle);
+        return isDiff;
     }
 }
-
-
 
 function init(){
     document.addEventListener('mouseover', mover);
@@ -163,8 +170,13 @@ function callback(request, sender, sendResponse) {
     //   sendResponse({farewell: "goodbye"});
     if(request.command === "init"){
         init();
-    }else{
+        sendResponse();
+    }else if(request.command === "destroy"){
         destroy();
+        sendResponse();
+    }else if(request.command === "diff"){
+        var isDiff = diff(JSON.parse(request.diffTarget));
+        sendResponse({isDiff:isDiff});
     }
 }
 
